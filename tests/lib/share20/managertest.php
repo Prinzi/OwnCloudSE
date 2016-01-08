@@ -1530,6 +1530,114 @@ class ManagerTest extends \Test\TestCase {
 
 		$manager->createShare($share);
 	}
+
+	public function dataRegisterProvider() {
+		return [
+			[[                                                                                        \OCP\Share::SHARE_TYPE_REMOTE,]],
+			[[                                                           \OCP\Share::SHARE_TYPE_LINK,                               ]],
+			[[                                                           \OCP\Share::SHARE_TYPE_LINK, \OCP\Share::SHARE_TYPE_REMOTE,]],
+			[[                             \OCP\Share::SHARE_TYPE_GROUP,                                                            ]],
+			[[                             \OCP\Share::SHARE_TYPE_GROUP,                              \OCP\Share::SHARE_TYPE_REMOTE,]],
+			[[                             \OCP\Share::SHARE_TYPE_GROUP, \OCP\Share::SHARE_TYPE_LINK,                               ]],
+			[[                             \OCP\Share::SHARE_TYPE_GROUP, \OCP\Share::SHARE_TYPE_LINK, \OCP\Share::SHARE_TYPE_REMOTE,]],
+			[[                             \OCP\Share::SHARE_TYPE_GROUP,                                                            ]],
+			[[\OCP\Share::SHARE_TYPE_USER,                                                                                          ]],
+			[[\OCP\Share::SHARE_TYPE_USER,                                                            \OCP\Share::SHARE_TYPE_REMOTE,]],
+			[[\OCP\Share::SHARE_TYPE_USER,                               \OCP\Share::SHARE_TYPE_LINK,                               ]],
+			[[\OCP\Share::SHARE_TYPE_USER,                               \OCP\Share::SHARE_TYPE_LINK, \OCP\Share::SHARE_TYPE_REMOTE,]],
+			[[\OCP\Share::SHARE_TYPE_USER, \OCP\Share::SHARE_TYPE_GROUP,                                                            ]],
+			[[\OCP\Share::SHARE_TYPE_USER, \OCP\Share::SHARE_TYPE_GROUP,                              \OCP\Share::SHARE_TYPE_REMOTE,]],
+			[[\OCP\Share::SHARE_TYPE_USER, \OCP\Share::SHARE_TYPE_GROUP, \OCP\Share::SHARE_TYPE_LINK,                               ]],
+			[[\OCP\Share::SHARE_TYPE_USER, \OCP\Share::SHARE_TYPE_GROUP, \OCP\Share::SHARE_TYPE_LINK, \OCP\Share::SHARE_TYPE_REMOTE,]],
+		];
+	}
+
+	/**
+	 * @dataProvider dataRegisterProvider
+	 * @param int[] $shareTypes
+	 */
+	public function testRegisterProvider($shareTypes) {
+		$provider = $this->getMock('OC\Share20\IShareProvider');
+		$this->manager->registerProvider('foo', $shareTypes, function() use ($provider) {
+			return $provider;
+		});
+
+		$this->assertEquals($provider, $this->invokePrivate($this->manager, 'getProvider', ['foo']));
+		foreach ($shareTypes as $shareType) {
+			$this->assertEquals($provider, $this->invokePrivate($this->manager, 'getProviderForType', [$shareType]));
+		}
+	}
+
+	/**
+	 * @expectedException \OC\Share20\Exception\ProviderException
+	 * @expectedExceptionMessage A share provider with the id 'foo' is already registered
+	 */
+	public function testRegisterProviderDuplicateId() {
+		$provider = $this->getMock('OC\Share20\IShareProvider');
+		$this->manager->registerProvider('foo', [\OCP\Share::SHARE_TYPE_USER], function() use ($provider) {
+			return $provider;
+		});
+		$this->manager->registerProvider('foo', [\OCP\Share::SHARE_TYPE_USER], function() use ($provider) {
+			return $provider;
+		});
+	}
+
+	/**
+	 * @expectedException \OC\Share20\Exception\ProviderException
+	 * @expectedExceptionMessage shareTypes can't be an empty array
+	 */
+	public function testRegisterProviderEmptyShareTypes() {
+		$provider = $this->getMock('OC\Share20\IShareProvider');
+		$this->manager->registerProvider('foo', [], function() use ($provider) {
+			return $provider;
+		});
+	}
+
+	/**
+	 * @expectedException \OC\Share20\Exception\ProviderException
+	 * @expectedExceptionMessage The share provider foo is already registered for share type 0
+	 */
+	public function testRegisterProviderSameType() {
+		$provider = $this->getMock('OC\Share20\IShareProvider');
+		$this->manager->registerProvider('foo', [\OCP\Share::SHARE_TYPE_USER], function() use ($provider) {
+			return $provider;
+		});
+		$this->manager->registerProvider('bar', [\OCP\Share::SHARE_TYPE_USER, \OCP\Share::SHARE_TYPE_GROUP], function() use ($provider) {
+			return $provider;
+		});
+	}
+
+	/**
+	 * @expectedException \OC\Share20\Exception\ProviderException
+	 * @expectedExceptionMessage No provider with id foo found
+	 */
+	public function testGetProviderNoProviderWithId() {
+		$this->invokePrivate($this->manager, 'getProvider', ['foo']);
+	}
+
+	/**
+	 * @expectedException \OC\Share20\Exception\ProviderException
+	 * @expectedExceptionMessage Callback does not return an IShareProvider instance for provider with id foo
+	 */
+	public function testGetProviderNoIShareProvider() {
+		$provider = $this->getMock('OC\Share20\IShare');
+		$this->manager->registerProvider('foo', [\OCP\Share::SHARE_TYPE_USER], function() use ($provider) {
+			return $provider;
+		});
+		$this->invokePrivate($this->manager, 'getProvider', ['foo']);
+	}
+
+	/**
+	 * @expectedException \OC\Share20\Exception\ProviderException
+	 * @expectedExceptionMessage No share provider registered for share type 1
+	 */
+	public function testGetProviderForTypeUnkownType() {
+		$provider = $this->getMock('OC\Share20\IShareProvider');
+		$this->manager->registerProvider('foo', [\OCP\Share::SHARE_TYPE_USER], function() use ($provider) {
+			return $provider;
+		});
+		$this->invokePrivate($this->manager, 'getProviderForType', [\OCP\SHARE::SHARE_TYPE_GROUP]);
+	}
 }
 
 class DummyPassword {

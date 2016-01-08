@@ -21,6 +21,7 @@
 namespace OC\Share20;
 
 
+use OC\Share20\Exception\ProviderException;
 use OCP\IConfig;
 use OCP\IL10N;
 use OCP\ILogger;
@@ -40,8 +41,11 @@ use OC\HintException;
  */
 class Manager {
 
-	/** @var IShareProvider[] */
-	private $defaultProvider;
+	/** @var array */
+	private $providers;
+
+	/** @var array */
+	private $type2provider;
 
 	/** @var ILogger */
 	private $logger;
@@ -86,6 +90,9 @@ class Manager {
 			IGroupManager $groupManager,
 			IL10N $l
 	) {
+		$this->providers = [];
+		$this->type2provider = [];
+
 		$this->logger = $logger;
 		$this->config = $config;
 		$this->secureRandom = $secureRandom;
@@ -96,6 +103,95 @@ class Manager {
 
 		// TEMP SOLUTION JUST TO GET STARTED
 		$this->defaultProvider = $defaultProvider;
+	}
+
+	/**
+	 * Register a share provider
+	 *
+	 * @param string $id The id of the share provider
+	 * @param int[] $shareTypes Array containing the share types this provider handles
+	 * @param callable $callback Callback that must return an IShareProvider instance
+	 * @throws ProviderException
+	 */
+	public function registerProvider($id, $shareTypes, callable $callback) {
+		// Providers must have an unique id
+		if (isset($this->providers[$id])) {
+			throw new ProviderException('A share provider with the id \''. $id . '\' is already registered');
+		}
+
+		if ($shareTypes === []) {
+			throw new ProviderException('shareTypes can\'t be an empty array');
+		}
+
+		foreach($shareTypes as $shareType) {
+			// We only have 1 provder per share type
+			if (isset($this->type2provider[$shareType])) {
+				throw new ProviderException('The share provider ' . $this->type2provider[$shareType] . ' is already registered for share type ' . $shareType);
+			}
+
+			/*
+			 * We only allow providers that provider
+			 * user- / group- / link- / federated-shares
+			 */
+			if ($shareType !== \OCP\Share::SHARE_TYPE_USER &&
+				$shareType !== \OCP\Share::SHARE_TYPE_GROUP &&
+				$shareType !== \OCP\Share::SHARE_TYPE_LINK &&
+				$shareType !== \OCP\Share::SHARE_TYPE_REMOTE) {
+				throw new ProviderException('Cannot register provider for share type ' . $shareType);
+				//Throw exception
+			}
+		}
+
+		// Add the provider
+		$this->providers[$id] = [
+			'id' => $id,
+			'callback' => $callback,
+			'provider' => null,
+			'shareTypes' => $shareTypes,
+		];
+
+		// Update the type mapping
+		foreach ($shareTypes as $shareType) {
+			$this->type2provider[$shareType] = $id;
+		}
+	}
+
+	/**
+	 * @param string $id
+	 * @return IShareProvider
+	 * @throws ProviderException
+	 */
+	private function getProvider($id) {
+		if (!isset($this->providers[$id])) {
+			throw new ProviderException('No provider with id ' . $id . ' found');
+		}
+
+		if ($this->providers[$id]['provider'] === null) {
+			// First time using this provider
+			$provider = call_user_func($this->providers[$id]['callback']);
+
+			// Make sure a proper provider is returned
+			if (!($provider instanceof IShareProvider)) {
+				throw new ProviderException('Callback does not return an IShareProvider instance for provider with id ' . $id);
+			}
+
+			$this->providers[$id]['provider'] = $provider;
+		}
+
+		return $this->providers[$id]['provider'];
+	}
+
+	/**
+	 * @param int $shareType
+	 * @return IShareProvider
+	 * @throws ProviderException
+	 */
+	private function getProviderForType($shareType) {
+		if (!isset($this->type2provider[$shareType])) {
+			throw new ProviderException('No share provider registered for share type ' . $shareType);
+		}
+
+		return $this->getProvider($this->type2provider[$shareType]);
 	}
 
 	/**

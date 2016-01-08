@@ -86,12 +86,21 @@ class ManagerTest extends \Test\TestCase {
 		$this->manager = new Manager(
 			$this->logger,
 			$this->config,
-			$this->defaultProvider,
 			$this->secureRandom,
 			$this->hasher,
 			$this->mountManager,
 			$this->groupManager,
 			$this->l
+		);
+		$this->manager->registerProvider('tmp',
+			[
+				\OCP\SHARE::SHARE_TYPE_USER,
+				\OCP\Share::SHARE_TYPE_GROUP,
+				\OCP\Share::SHARE_TYPE_LINK
+			],
+			function() {
+				return $this->defaultProvider;
+			}
 		);
 	}
 
@@ -133,7 +142,6 @@ class ManagerTest extends \Test\TestCase {
 			->setConstructorArgs([
 				$this->logger,
 				$this->config,
-				$this->defaultProvider,
 				$this->secureRandom,
 				$this->hasher,
 				$this->mountManager,
@@ -142,6 +150,13 @@ class ManagerTest extends \Test\TestCase {
 			])
 			->setMethods(['getShareById', 'deleteChildren'])
 			->getMock();
+
+		$manager->registerProvider('tmp',
+			[$shareType],
+			function() {
+				return $this->defaultProvider;
+			}
+		);
 
 		$sharedBy = $this->getMock('\OCP\IUser');
 		$sharedBy->method('getUID')->willReturn('sharedBy');
@@ -224,7 +239,6 @@ class ManagerTest extends \Test\TestCase {
 			->setConstructorArgs([
 				$this->logger,
 				$this->config,
-				$this->defaultProvider,
 				$this->secureRandom,
 				$this->hasher,
 				$this->mountManager,
@@ -233,6 +247,15 @@ class ManagerTest extends \Test\TestCase {
 			])
 			->setMethods(['getShareById'])
 			->getMock();
+
+		$manager->registerProvider('tmp',
+			[
+				\OCP\Share::SHARE_TYPE_USER
+			],
+			function() {
+				return $this->defaultProvider;
+			}
+		);
 
 		$sharedBy1 = $this->getMock('\OCP\IUser');
 		$sharedBy1->method('getUID')->willReturn('sharedBy1');
@@ -369,7 +392,6 @@ class ManagerTest extends \Test\TestCase {
 			->setConstructorArgs([
 				$this->logger,
 				$this->config,
-				$this->defaultProvider,
 				$this->secureRandom,
 				$this->hasher,
 				$this->mountManager,
@@ -378,6 +400,13 @@ class ManagerTest extends \Test\TestCase {
 			])
 			->setMethods(['deleteShare'])
 			->getMock();
+
+		$manager->registerProvider('tmp',
+			[\OCP\Share::SHARE_TYPE_USER],
+			function() {
+				return $this->defaultProvider;
+			}
+		);
 
 		$share = $this->getMock('\OC\Share20\IShare');
 
@@ -1156,7 +1185,6 @@ class ManagerTest extends \Test\TestCase {
 			->setConstructorArgs([
 				$this->logger,
 				$this->config,
-				$this->defaultProvider,
 				$this->secureRandom,
 				$this->hasher,
 				$this->mountManager,
@@ -1185,7 +1213,6 @@ class ManagerTest extends \Test\TestCase {
 			->setConstructorArgs([
 				$this->logger,
 				$this->config,
-				$this->defaultProvider,
 				$this->secureRandom,
 				$this->hasher,
 				$this->mountManager,
@@ -1205,7 +1232,6 @@ class ManagerTest extends \Test\TestCase {
 			->setConstructorArgs([
 				$this->logger,
 				$this->config,
-				$this->defaultProvider,
 				$this->secureRandom,
 				$this->hasher,
 				$this->mountManager,
@@ -1214,6 +1240,13 @@ class ManagerTest extends \Test\TestCase {
 			])
 			->setMethods(['canShare', 'generalCreateChecks', 'userCreateChecks', 'pathCreateChecks'])
 			->getMock();
+
+		$manager->registerProvider('tmp',
+			[\OCP\Share::SHARE_TYPE_USER],
+			function() {
+				return $this->defaultProvider;
+			}
+		);
 
 		$sharedWith = $this->getMock('\OCP\IUser');
 		$sharedBy = $this->getMock('\OCP\IUser');
@@ -1267,7 +1300,6 @@ class ManagerTest extends \Test\TestCase {
 			->setConstructorArgs([
 				$this->logger,
 				$this->config,
-				$this->defaultProvider,
 				$this->secureRandom,
 				$this->hasher,
 				$this->mountManager,
@@ -1276,6 +1308,13 @@ class ManagerTest extends \Test\TestCase {
 			])
 			->setMethods(['canShare', 'generalCreateChecks', 'groupCreateChecks', 'pathCreateChecks'])
 			->getMock();
+
+		$manager->registerProvider('tmp',
+			[\OCP\Share::SHARE_TYPE_GROUP],
+			function() {
+				return $this->defaultProvider;
+			}
+		);
 
 		$sharedWith = $this->getMock('\OCP\IGroup');
 		$sharedBy = $this->getMock('\OCP\IUser');
@@ -1329,7 +1368,7 @@ class ManagerTest extends \Test\TestCase {
 			->setConstructorArgs([
 				$this->logger,
 				$this->config,
-				$this->defaultProvider,
+
 				$this->secureRandom,
 				$this->hasher,
 				$this->mountManager,
@@ -1345,6 +1384,13 @@ class ManagerTest extends \Test\TestCase {
 				'verifyPassword',
 			])
 			->getMock();
+
+		$manager->registerProvider('tmp',
+			[\OCP\Share::SHARE_TYPE_LINK],
+			function() {
+				return $this->defaultProvider;
+			}
+		);
 
 		$sharedBy = $this->getMock('\OCP\IUser');
 		$sharedBy->method('getUID')->willReturn('sharedBy');
@@ -1470,7 +1516,6 @@ class ManagerTest extends \Test\TestCase {
 			->setConstructorArgs([
 				$this->logger,
 				$this->config,
-				$this->defaultProvider,
 				$this->secureRandom,
 				$this->hasher,
 				$this->mountManager,
@@ -1484,6 +1529,13 @@ class ManagerTest extends \Test\TestCase {
 				'pathCreateChecks',
 			])
 			->getMock();
+
+		$manager->registerProvider('tmp',
+			[\OCP\Share::SHARE_TYPE_USER],
+			function() {
+				return $this->defaultProvider;
+			}
+		);
 
 		$sharedWith = $this->getMock('\OCP\IUser');
 		$sharedBy = $this->getMock('\OCP\IUser');
@@ -1557,14 +1609,24 @@ class ManagerTest extends \Test\TestCase {
 	 * @param int[] $shareTypes
 	 */
 	public function testRegisterProvider($shareTypes) {
+		$manager = new Manager(
+				$this->logger,
+				$this->config,
+				$this->secureRandom,
+				$this->hasher,
+				$this->mountManager,
+				$this->groupManager,
+				$this->l
+		);
+
 		$provider = $this->getMock('OC\Share20\IShareProvider');
-		$this->manager->registerProvider('foo', $shareTypes, function() use ($provider) {
+		$manager->registerProvider('foo', $shareTypes, function() use ($provider) {
 			return $provider;
 		});
 
-		$this->assertEquals($provider, $this->invokePrivate($this->manager, 'getProvider', ['foo']));
+		$this->assertEquals($provider, $this->invokePrivate($manager, 'getProvider', ['foo']));
 		foreach ($shareTypes as $shareType) {
-			$this->assertEquals($provider, $this->invokePrivate($this->manager, 'getProviderForType', [$shareType]));
+			$this->assertEquals($provider, $this->invokePrivate($manager, 'getProviderForType', [$shareType]));
 		}
 	}
 
@@ -1573,11 +1635,21 @@ class ManagerTest extends \Test\TestCase {
 	 * @expectedExceptionMessage A share provider with the id 'foo' is already registered
 	 */
 	public function testRegisterProviderDuplicateId() {
+		$manager = new Manager(
+			$this->logger,
+			$this->config,
+			$this->secureRandom,
+			$this->hasher,
+			$this->mountManager,
+			$this->groupManager,
+			$this->l
+		);
+
 		$provider = $this->getMock('OC\Share20\IShareProvider');
-		$this->manager->registerProvider('foo', [\OCP\Share::SHARE_TYPE_USER], function() use ($provider) {
+		$manager->registerProvider('foo', [\OCP\Share::SHARE_TYPE_USER], function() use ($provider) {
 			return $provider;
 		});
-		$this->manager->registerProvider('foo', [\OCP\Share::SHARE_TYPE_USER], function() use ($provider) {
+		$manager->registerProvider('foo', [\OCP\Share::SHARE_TYPE_USER], function() use ($provider) {
 			return $provider;
 		});
 	}
@@ -1587,8 +1659,18 @@ class ManagerTest extends \Test\TestCase {
 	 * @expectedExceptionMessage shareTypes can't be an empty array
 	 */
 	public function testRegisterProviderEmptyShareTypes() {
+		$manager = new Manager(
+			$this->logger,
+			$this->config,
+			$this->secureRandom,
+			$this->hasher,
+			$this->mountManager,
+			$this->groupManager,
+			$this->l
+		);
+
 		$provider = $this->getMock('OC\Share20\IShareProvider');
-		$this->manager->registerProvider('foo', [], function() use ($provider) {
+		$manager->registerProvider('foo', [], function() use ($provider) {
 			return $provider;
 		});
 	}
@@ -1598,11 +1680,21 @@ class ManagerTest extends \Test\TestCase {
 	 * @expectedExceptionMessage The share provider foo is already registered for share type 0
 	 */
 	public function testRegisterProviderSameType() {
+		$manager = new Manager(
+			$this->logger,
+			$this->config,
+			$this->secureRandom,
+			$this->hasher,
+			$this->mountManager,
+			$this->groupManager,
+			$this->l
+		);
+
 		$provider = $this->getMock('OC\Share20\IShareProvider');
-		$this->manager->registerProvider('foo', [\OCP\Share::SHARE_TYPE_USER], function() use ($provider) {
+		$manager->registerProvider('foo', [\OCP\Share::SHARE_TYPE_USER], function() use ($provider) {
 			return $provider;
 		});
-		$this->manager->registerProvider('bar', [\OCP\Share::SHARE_TYPE_USER, \OCP\Share::SHARE_TYPE_GROUP], function() use ($provider) {
+		$manager->registerProvider('bar', [\OCP\Share::SHARE_TYPE_USER, \OCP\Share::SHARE_TYPE_GROUP], function() use ($provider) {
 			return $provider;
 		});
 	}
@@ -1612,7 +1704,17 @@ class ManagerTest extends \Test\TestCase {
 	 * @expectedExceptionMessage No provider with id foo found
 	 */
 	public function testGetProviderNoProviderWithId() {
-		$this->invokePrivate($this->manager, 'getProvider', ['foo']);
+		$manager = new Manager(
+			$this->logger,
+			$this->config,
+			$this->secureRandom,
+			$this->hasher,
+			$this->mountManager,
+			$this->groupManager,
+			$this->l
+		);
+
+		$this->invokePrivate($manager, 'getProvider', ['foo']);
 	}
 
 	/**
@@ -1620,11 +1722,21 @@ class ManagerTest extends \Test\TestCase {
 	 * @expectedExceptionMessage Callback does not return an IShareProvider instance for provider with id foo
 	 */
 	public function testGetProviderNoIShareProvider() {
+		$manager = new Manager(
+			$this->logger,
+			$this->config,
+			$this->secureRandom,
+			$this->hasher,
+			$this->mountManager,
+			$this->groupManager,
+			$this->l
+		);
+
 		$provider = $this->getMock('OC\Share20\IShare');
-		$this->manager->registerProvider('foo', [\OCP\Share::SHARE_TYPE_USER], function() use ($provider) {
+		$manager->registerProvider('foo', [\OCP\Share::SHARE_TYPE_USER], function() use ($provider) {
 			return $provider;
 		});
-		$this->invokePrivate($this->manager, 'getProvider', ['foo']);
+		$this->invokePrivate($manager, 'getProvider', ['foo']);
 	}
 
 	/**
@@ -1632,11 +1744,21 @@ class ManagerTest extends \Test\TestCase {
 	 * @expectedExceptionMessage No share provider registered for share type 1
 	 */
 	public function testGetProviderForTypeUnkownType() {
+		$manager = new Manager(
+			$this->logger,
+			$this->config,
+			$this->secureRandom,
+			$this->hasher,
+			$this->mountManager,
+			$this->groupManager,
+			$this->l
+		);
+
 		$provider = $this->getMock('OC\Share20\IShareProvider');
-		$this->manager->registerProvider('foo', [\OCP\Share::SHARE_TYPE_USER], function() use ($provider) {
+		$manager->registerProvider('foo', [\OCP\Share::SHARE_TYPE_USER], function() use ($provider) {
 			return $provider;
 		});
-		$this->invokePrivate($this->manager, 'getProviderForType', [\OCP\SHARE::SHARE_TYPE_GROUP]);
+		$this->invokePrivate($manager, 'getProviderForType', [\OCP\SHARE::SHARE_TYPE_GROUP]);
 	}
 }
 

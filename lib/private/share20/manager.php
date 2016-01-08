@@ -73,7 +73,6 @@ class Manager {
 	 *
 	 * @param ILogger $logger
 	 * @param IConfig $config
-	 * @param IShareProvider $defaultProvider
 	 * @param ISecureRandom $secureRandom
 	 * @param IHasher $hasher
 	 * @param IMountManager $mountManager
@@ -83,7 +82,6 @@ class Manager {
 	public function __construct(
 			ILogger $logger,
 			IConfig $config,
-			IShareProvider $defaultProvider,
 			ISecureRandom $secureRandom,
 			IHasher $hasher,
 			IMountManager $mountManager,
@@ -100,9 +98,6 @@ class Manager {
 		$this->mountManager = $mountManager;
 		$this->groupManager = $groupManager;
 		$this->l = $l;
-
-		// TEMP SOLUTION JUST TO GET STARTED
-		$this->defaultProvider = $defaultProvider;
 	}
 
 	/**
@@ -344,7 +339,7 @@ class Manager {
 
 
 	/**
-	 * Check for pre share requirements for use shares
+	 * Check for pre share requirements for user shares
 	 *
 	 * @param IShare $share
 	 * @throws \Exception
@@ -367,7 +362,8 @@ class Manager {
 		 *
 		 * Also this is not what we want in the future.. then we want to squash identical shares.
 		 */
-		$existingShares = $this->defaultProvider->getSharesByPath($share->getPath());
+		$provider = $this->getProviderForType(\OCP\Share::SHARE_TYPE_USER);
+		$existingShares = $provider->getSharesByPath($share->getPath());
 		foreach($existingShares as $existingShare) {
 			// Identical share already existst
 			if ($existingShare->getSharedWith() === $share->getSharedWith()) {
@@ -402,7 +398,8 @@ class Manager {
 		 *
 		 * Also this is not what we want in the future.. then we want to squash identical shares.
 		 */
-		$existingShares = $this->defaultProvider->getSharesByPath($share->getPath());
+		$provider = $this->getProviderForType(\OCP\Share::SHARE_TYPE_GROUP);
+		$existingShares = $provider->getSharesByPath($share->getPath());
 		foreach($existingShares as $existingShare) {
 			if ($existingShare->getSharedWith() === $share->getSharedWith()) {
 				throw new \Exception('Path already shared with this group');
@@ -552,7 +549,8 @@ class Manager {
 			throw new \Exception($error);
 		}
 
-		$share = $this->defaultProvider->create($share);
+		$provider = $this->getProviderForType($share->getShareType());
+		$share = $provider->create($share);
 
 		// Post share hook
 		$postHookData = [
@@ -588,12 +586,18 @@ class Manager {
 	 */
 	protected function deleteChildren(IShare $share) {
 		$deletedShares = [];
-		foreach($this->defaultProvider->getChildren($share) as $child) {
-			$deletedChildren = $this->deleteChildren($child);
-			$deletedShares = array_merge($deletedShares, $deletedChildren);
 
-			$this->defaultProvider->delete($child);
-			$deletedShares[] = $child;
+		$providerIds = array_keys($this->providers);
+
+		foreach($providerIds as $providerId) {
+			$provider = $this->getProvider($providerId);
+			foreach ($provider->getChildren($share) as $child) {
+				$deletedChildren = $this->deleteChildren($child);
+				$deletedShares = array_merge($deletedShares, $deletedChildren);
+
+				$provider->delete($child);
+				$deletedShares[] = $child;
+			}
 		}
 
 		return $deletedShares;
@@ -645,7 +649,8 @@ class Manager {
 		$deletedShares = $this->deleteChildren($share);
 
 		// Do the actual delete
-		$this->defaultProvider->delete($share);
+		$provider = $this->getProviderForType($share->getShareType());
+		$provider->delete($share);
 
 		// All the deleted shares caused by this delete
 		$deletedShares[] = $share;
@@ -684,7 +689,26 @@ class Manager {
 			throw new ShareNotFound();
 		}
 
-		$share = $this->defaultProvider->getShareById($id);
+		//FIXME ids need to become proper providerid:shareid eventually
+
+		$providerIds = array_keys($this->providers);
+		$found = false;
+
+		foreach ($providerIds as $providerId) {
+			$provider = $this->getProvider($providerId);
+
+			try {
+				$share = $provider->getShareById($id);
+				$found = true;
+				break;
+			} catch (ShareNotFound $e) {
+				// Ignore
+			}
+		}
+
+		if ($found === false) {
+			throw new ShareNotFound();
+		}
 
 		return $share;
 	}
